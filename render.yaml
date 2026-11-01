@@ -1,0 +1,18 @@
+# Blueprint de Render para el servidor de salas de Pokémon Royale.
+# Render > New > Blueprint > elige este repositorio. Solo despliega la carpeta /server (el juego sigue en Netlify).
+services:
+  - type: web
+    name: pokemon-royale-server
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Opcional: limita qué webs pueden conectarse (tu dirección de Netlify). Vacío = cualquiera.
+      # - key: ALLOWED_ORIGINS
+      #   value: https://TU-JUEGO.netlify.app
