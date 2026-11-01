@@ -1,0 +1,17 @@
+import { h, toast } from '../dom.js';
+import { todayKey } from '../../game/profile.js';
+const symbols={poke:{name:'Poké Ball',icon:'🔴'},super:{name:'Super Ball',icon:'🔵'},ultra:{name:'Ultra Ball',icon:'🟡'},pikachu:{name:'Pikachu',icon:'⚡'},coin:{name:'Monedas',icon:'🪙'},ticket:{name:'Ficha',icon:'🎟️'}};
+const pays=[['3 × Poké Ball','x3'],['3 × Super Ball','x4'],['3 × Ultra Ball','x6'],['3 × Pikachu','x5'],['3 × Monedas','x3'],['3 × Ficha','x7'],['2 símbolos iguales','Premio x1,83 de la apuesta']];
+export function tragaperrasScreen(app){
+ const p=app.profile,root=h('div',{class:'casino-panel'});let bet=50,last=null,rolling=false,rollTimer=null;
+ const draw=()=>{const d=p.data.slotsDaily,spins=d.day===todayKey()?d.spins:0;
+ root.replaceChildren(h('section',{class:'panel stack'},h('div',{class:'tag'},'MINIJUEGO · MONEDAS'),h('h2',null,'Tragaperras Pokémon'),h('p',{class:'sub'},`Máximo 20 tiradas al día · Monedas: ${p.data.coins} · Fichas gratis: ${p.data.slotTokens||0}`),
+ h('div',{class:`slot-machine ${rolling?'is-rolling':''}`},h('div',{class:'slot-topline'},'★ POKÉMON ROYALE ★'),h('div',{class:'slot-reels'},...(last?.reels||['poke','pikachu','ultra']).map(x=>h('div',{class:'slot-reel'},h('span',{class:'slot-symbol'},symbols[x]?.icon||'❔'),h('small',null,symbols[x]?.name||x)))),h('div',{class:'slot-bottomline'},'GOOD LUCK!')),
+ h('div',{class:'slot-paytable'},h('h3',null,'Tabla de premios'),...pays.map(([combo,reward])=>h('div',{class:'slot-payrow'},h('b',null,combo),h('strong',null,reward)))),
+ h('div',{class:'row between'},h('b',null,'Apuesta'),h('span',{class:'sub'},`${20-spins} tiradas restantes`)),
+ h('div',{class:'row'},...[50,100,250].map(n=>h('button',{class:`btn ${bet===n?'btn-gold':'btn-blue'} sm`,disabled:rolling,on:{click:()=>{bet=n;draw();}}},`${n} 🪙`))),
+ h('button',{class:'btn btn-gold btn-big',disabled:rolling||spins>=20||(!(p.data.slotTokens>0)&&p.data.coins<bet),on:{click:()=>{if(rolling)return;rolling=true;root.querySelector('.slot-machine')?.classList.add('is-rolling');let frames=0;const reels=root.querySelectorAll('.slot-reel');rollTimer=setInterval(()=>{reels.forEach(el=>{const k=Object.keys(symbols)[Math.floor(Math.random()*Object.keys(symbols).length)];el.querySelector('.slot-symbol').textContent=symbols[k].icon;el.querySelector('small').textContent=symbols[k].name;});if(++frames>13){clearInterval(rollTimer);const r=p.spinSlots(bet);rolling=false;if(!r.ok){toast(r.reason==='limite'?'Has alcanzado las 20 tiradas de hoy.':'No tienes monedas suficientes.','info');draw();return;}last=r;app.audio.sfx(r.payout>0?'coin':'click');toast(r.free?(r.payout?`Ficha gratis utilizada: ¡premio de ${r.payout} monedas!`:'Ficha gratis utilizada; sin premio.'):(r.payout>bet?`¡Premio: ${r.payout} monedas!`:r.payout?`Recuperas ${r.payout} monedas.`:'Sin premio esta vez.'),'ok');draw();}},85);}}},rolling?'🎰 GIRANDO…':p.data.slotTokens>0?'GIRAR · FICHA GRATIS':'🎰 GIRAR'),
+ last&&h('div',{class:'result'},h('b',null,last.payout?`Premio: ${last.payout} monedas`:'Sin premio'),h('span',null,`Resultado: ${last.reels.map(x=>symbols[x]?.name||x).join(' · ')}`),h('span',{class:'sub'},`Balance: ${last.net>0?'+':''}${last.net} monedas`)),
+ h('p',{class:'sub'},'Las combinaciones triples pagan el multiplicador indicado. Dos símbolos iguales devuelven la apuesta. Las fichas gratis no consumen monedas. No hay premios de Pokémon legendarios ni Master Ball.')));
+ };draw();app.watch(draw);app.onLeave(()=>{if(rollTimer)clearInterval(rollTimer);});return root;
+}
